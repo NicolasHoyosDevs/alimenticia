@@ -1,13 +1,13 @@
 from langgraph.graph import StateGraph, END
-from src.state import AgentState  # Assuming state.py is in src
-from src.agents import (
+from ..schemas.schema import AgentState  # Assuming state.py is in src
+from ..agents.agents import (  # Assuming agents.py is in src
     welcome_and_capture_node,
     user_profile_retrieval_node,
     image_analysis_node,
     nutritional_reasoning_node,
     presentation_and_qa_node,
     data_persistence_node
-)  # Assuming agents.py is in src
+)
 
 # --- LangGraph Workflow Definition ---
 
@@ -131,3 +131,105 @@ if __name__ == "__main__":
         traceback.print_exc()
 
     print("\nGraph execution finished.")
+
+
+# from langgraph.graph import StateGraph, END
+# from schemas.schema import AgentState
+# from src.agents import (
+#     welcome_and_capture_node,
+#     user_profile_retrieval_node,
+#     image_analysis_node,
+#     nutritional_reasoning_node,
+#     presentation_and_qa_node,
+#     data_persistence_node
+# )
+
+# # --- LangGraph Workflow Definition ---
+
+# workflow = StateGraph(AgentState)
+
+# workflow.add_node("welcome_and_capture", welcome_and_capture_node)
+# workflow.add_node("user_profile_retrieval", user_profile_retrieval_node)
+# workflow.add_node("image_analysis", image_analysis_node)
+# workflow.add_node("nutritional_reasoning", nutritional_reasoning_node)
+# workflow.add_node("presentation_and_qa", presentation_and_qa_node)
+# workflow.add_node("data_persistence", data_persistence_node)
+
+# workflow.set_entry_point("welcome_and_capture")
+
+# workflow.add_edge("welcome_and_capture", "user_profile_retrieval")
+# workflow.add_edge("welcome_and_capture", "image_analysis")
+# workflow.add_edge("user_profile_retrieval", "nutritional_reasoning")
+# workflow.add_edge("image_analysis", "nutritional_reasoning")
+# workflow.add_edge("nutritional_reasoning", "presentation_and_qa")
+# workflow.add_edge("presentation_and_qa", "data_persistence")
+# workflow.add_edge("data_persistence", END)
+
+# app = workflow.compile()
+
+# if __name__ == "__main__":
+#     print("Compiling and running LangGraph agent...")
+
+#     # Simulate initial input
+#     # Replace with actual image loading
+#     # with open(r"path_to_your_image.jpg", "rb") as f:
+#     #     sample_image_bytes = f.read()
+#     sample_image_bytes = b"simulated_image_data_bytes"
+
+#     initial_state = {
+#         "user_id": "test_user_123",
+#         "input_image_bytes": sample_image_bytes,
+#         "chat_history": []
+#     }
+#     print(
+#         f"Invoking graph with initial state: {{k: v if k != 'input_image_bytes' else 'image_bytes_present' for k, v in initial_state.items()}}")
+
+#     final_state = None
+#     try:
+#         for step_output in app.stream(initial_state):
+#             node_name = next(iter(step_output))
+#             current_state_after_node = step_output[node_name]
+
+#             print(f"--- Current State after node '{node_name}' ---")
+
+#             if current_state_after_node is not None:
+#                 state_dict = None
+#                 if isinstance(current_state_after_node, AgentState):
+#                     state_dict = current_state_after_node.model_dump()
+#                 elif isinstance(current_state_after_node, dict):
+#                     state_dict = current_state_after_node
+#                 else:
+#                     print(
+#                         f"Warning: State after node '{node_name}' is of unexpected type: {type(current_state_after_node)}")
+#                     state_dict = {}
+
+#                 printable_state = {
+#                     k: v if k != 'input_image_bytes' else f'{len(v) if isinstance(v, bytes) else "0 or not bytes"} bytes'
+#                     for k, v in state_dict.items()
+#                 }
+#                 print(printable_state)
+#             else:
+#                 print(
+#                     f"Warning: State after node '{node_name}' is None.")
+
+#             print("---------------------------------------")
+#             final_state = current_state_after_node
+
+#         if final_state is not None and isinstance(final_state, AgentState):
+#             print("\n---FINAL AGENT OUTPUT---")
+#             print(
+#                 f"Formatted Response: {final_state.formatted_final_response}")
+#             if final_state.error_message:
+#                 print(f"Error: {final_state.error_message}")
+#         elif final_state is not None:
+#             print("\n---FINAL AGENT OUTPUT (Unexpected format)---")
+#             print(f"Final state: {final_state}")
+#         else:
+#             print("Graph execution did not produce a final state.")
+
+#     except Exception as e:
+#         print(f"An error occurred during graph execution: {e}")
+#         import traceback
+#         traceback.print_exc()
+
+#     print("\nGraph execution finished.")

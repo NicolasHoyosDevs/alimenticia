@@ -10,8 +10,8 @@ class DetectedFoodItem(BaseModel):
         description="Coordinates of the bounding box [x_min, y_min, x_max, y_max] relative to image size (0.0-1.0) or pixels.")
     mask_data: Optional[Any] = Field(
         None, description="Segmentation mask data, e.g., RLE, polygon, or raw mask.")
-    confidence: Optional[float] = Field(
-        None, description="Detection confidence score.")
+    # confidence: Optional[float] = Field(
+    #     None, description="Detection confidence score.")
 
 
 class UserProfile(BaseModel):
@@ -61,3 +61,53 @@ class AgentState(BaseModel):
     error_message: Optional[str] = None
     image_analyzed: bool = False
     profile_retrieved: bool = False
+
+
+class DetectedFoodItem(BaseModel):
+    label: str = Field(description="Name of the detected food item.")
+    bounding_box: List[float] = Field(
+        description="Coordinates of the bounding box [x_min, y_min, x_max, y_max] relative to image size (0.0-1.0) or pixels.")
+    mask_data: Optional[Any] = Field(
+        None, description="Segmentation mask data, e.g., RLE, polygon, or raw mask.")
+    # confidence: Optional[float] = Field(
+    #     None, description="Detection confidence score.")
+
+
+# class UserProfile(BaseModel):
+#     user_id: str
+#     age: Optional[int] = None
+#     sex: Optional[str] = None
+#     height_cm: Optional[float] = None
+#     current_weight_kg: Optional[float] = None
+#     activity_level: Optional[str] = None
+#     primary_goal: Optional[str] = None
+#     target_weight_kg: Optional[float] = None
+#     weight_change_rate_kg_week: Optional[float] = None
+#     secondary_goals: Optional[List[str]] = Field(default_factory=list)
+#     dietary_restrictions: Optional[List[str]] = Field(default_factory=list)
+#     allergies: Optional[List[str]] = Field(default_factory=list)
+#     intolerances: Optional[List[str]] = Field(default_factory=list)
+#     disliked_foods: Optional[List[str]] = Field(default_factory=list)
+#     medical_conditions: Optional[List[str]] = Field(default_factory=list)
+#     target_calories_kcal: Optional[int] = None
+#     target_protein_g: Optional[int] = None
+#     target_carbs_g: Optional[int] = None
+#     target_fat_g: Optional[int] = None
+#     target_fiber_g: Optional[int] = None
+
+
+# class AgentState(BaseModel):
+#     user_id: str
+#     session_id: Optional[str] = None
+#     input_image_bytes: Optional[bytes] = None
+#     user_profile: Optional[UserProfile] = None
+#     detected_foods: Optional[List[DetectedFoodItem]
+#                              ] = Field(default_factory=list)
+#     raw_gemini_image_analysis_response: Optional[Any] = None
+#     nutritional_recommendation: Optional[str] = None
+#     chat_history: List[Dict[str, str]] = Field(
+#         default_factory=list, description='e.g., [{"role": "user", "content": "..."}, {"role": "model", "content": "..."}]')
+#     formatted_final_response: Optional[str] = None
+#     error_message: Optional[str] = None
+#     image_analyzed: bool = False
+#     profile_retrieved: bool = False

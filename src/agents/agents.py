@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 import google.generativeai as genai
 
 # Assuming state.py is in src
-from src.state import AgentState, UserProfile, DetectedFoodItem
+from ..schemas.schema import AgentState, UserProfile, DetectedFoodItem
 
 # Load environment variables (like GOOGLE_API_KEY)
 load_dotenv()
@@ -103,10 +103,9 @@ def image_analysis_node(state: AgentState) -> dict:
         Analyze the provided image of a meal.
         Identify all distinct food items in this image.
         For each item, provide its name (label) and a bounding box as a list of four normalized coordinates [ymin, xmin, ymax, xmax].
-        Optionally, if you can determine a confidence score for each detection, please include it.
-        Return the response as a JSON list of objects, where each object has 'label', 'bounding_box', and optionally 'confidence'.
+        Return the response as a JSON list of objects, where each object has 'label', 'bounding_box'.
         Example: [{'label': 'apple', 'bounding_box': [
-            0.1, 0.1, 0.3, 0.3], 'confidence': 0.9}]
+            0.1, 0.1, 0.3, 0.3]}]
         """
 
         # The `generate_content` call for multimodal input (image + text)
@@ -135,7 +134,8 @@ def image_analysis_node(state: AgentState) -> dict:
 
             print(f"Detected foods: {detected_foods_list}")
             return {
-                "detected_foods": detected_foods_list,
+                # Convert to dicts
+                "detected_foods": [item.model_dump() for item in detected_foods_list],
                 "raw_gemini_image_analysis_response": response.text,  # Store raw for logging
                 "image_analyzed": True,
                 "error_message": None
