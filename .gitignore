@@ -1,0 +1,40 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# IDE specific
+.vscode/
+.idea/
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.venv
+
+# Downloaded files / Test images
+# Add any specific paths to test images or downloaded data if needed
+# For example, if you have a downloads folder:
+# downloads/
+# Or specific files:
+# *.jpg
+# *.png
+
+# Secrets
+secrets.json
+*.pem
+*.key
+credentials.json
+
+# Logs
+*.log
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
