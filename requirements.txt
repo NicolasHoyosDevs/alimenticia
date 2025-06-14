@@ -6,9 +6,7 @@ google-generativeai
 python-dotenv # For loading .env files
 
 # For database connection (choose one or add if using something else)
-# psycopg2-binary # For PostgreSQL
-
-# Add other specific dependencies as needed, e.g., for a web framework
-# Flask
-# FastAPI
-# uvicorn
+psycopg2-binary
+psycopg2
+FastAPI
+uvicorn
