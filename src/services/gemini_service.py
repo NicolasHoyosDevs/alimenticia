@@ -84,6 +84,7 @@ def analyze_image_with_gemini(image_bytes: bytes, custom_prompt: Optional[str] =
         # The generate_content call for multimodal input (image + text)
         # As per the Colab, the arguments are passed as a list.
         response = image_analysis_model.generate_content([prompt, image_part])
+        raw_gemini_image_analysis_response = response.text
 
         print("Gemini response received for image analysis.")
         # print(f"Raw response text: {response.text}") # For debugging
@@ -97,11 +98,17 @@ def analyze_image_with_gemini(image_bytes: bytes, custom_prompt: Optional[str] =
         if cleaned_response_text.endswith("```"):
             cleaned_response_text = cleaned_response_text[:-3]
 
-        detected_items_data = json.loads(cleaned_response_text)
+        parsed = safe_json_loads(cleaned_response_text)
+        if parsed is None:
+            return {
+                "error_message": "No se pudo analizar la respuesta de Gemini (JSON inválido)",
+                "image_analyzed": False,
+                "detected_foods": []
+            }
 
         detected_foods_list = []
-        if isinstance(detected_items_data, list):  # Ensure the response is a list
-            for item_data in detected_items_data:
+        if isinstance(parsed, list):  # Ensure the response is a list
+            for item_data in parsed:
                 if isinstance(item_data, dict) and "label" in item_data and "bounding_box" in item_data:
                     # Optional: Add more validation for bounding_box format if needed
                     detected_foods_list.append(DetectedFoodItem(**item_data))
@@ -110,10 +117,10 @@ def analyze_image_with_gemini(image_bytes: bytes, custom_prompt: Optional[str] =
                         f"Warning: Skipping item due to missing fields or incorrect format: {item_data}")
         else:
             print(
-                f"Warning: Expected a list from Gemini, but got: {type(detected_items_data)}")
+                f"Warning: Expected a list from Gemini, but got: {type(parsed)}")
 
         print(f"Detected foods: {detected_foods_list}")
-        return detected_foods_list
+        return detected_foods_list, raw_gemini_image_analysis_response
 
     except json.JSONDecodeError as e:
         print(f"Error: Could not parse JSON from Gemini response: {e}")
@@ -152,32 +159,74 @@ def get_nutritional_advice(detected_foods: List[DetectedFoodItem], user_profile:
         food_list_str = ", ".join([food.label for food in detected_foods])
 
         # Constructing a more detailed prompt
+        # prompt_parts = [
+        #     "As a nutritional assistant, analyze the following meal and provide personalized advice.",
+        #     "User Profile:",
+        #     f"- Age: {user_profile.age or 'Not specified'}",
+        #     f"- Sex: {user_profile.sex or 'Not specified'}",
+        #     f"- Height: {user_profile.height_cm or 'Not specified'} cm",
+        #     f"- Current Weight: {user_profile.current_weight_kg or 'Not specified'} kg",
+        #     f"- Activity Level: {user_profile.activity_level or 'Not specified'}",
+        #     f"- Primary Goal: {user_profile.primary_goal or 'Not specified'}",
+        #     f"- Dietary Restrictions: {', '.join(user_profile.dietary_restrictions) if user_profile.dietary_restrictions else 'None'}",
+        #     f"- Allergies: {', '.join(user_profile.allergies) if user_profile.allergies else 'None'}",
+        #     f"- Intolerances: {', '.join(user_profile.intolerances) if user_profile.intolerances else 'None'}",
+        #     f"- Disliked Foods: {', '.join(user_profile.disliked_foods) if user_profile.disliked_foods else 'None'}",
+        #     f"- Medical Conditions: {', '.join(user_profile.medical_conditions) if user_profile.medical_conditions else 'None'}",
+        #     f"- Target Calories (kcal): {user_profile.target_calories_kcal or 'Not specified'}",
+        #     f"- Target Protein (g): {user_profile.target_protein_g or 'Not specified'}",
+        #     f"- Target Carbs (g): {user_profile.target_carbs_g or 'Not specified'}",
+        #     f"- Target Fat (g): {user_profile.target_fat_g or 'Not specified'}",
+        #     f"- Target Fiber (g): {user_profile.target_fiber_g or 'Not specified'}",
+        #     f"\nDetected Foods in the Meal: {food_list_str}",
+        #     "\n(Note: Assume typical portion sizes. Detailed portion size/weight is not available from the image analysis.)",
+        #     "\nBased on the user's profile and the detected foods, provide a concise and actionable nutritional recommendation.",
+        #     "Consider the user's primary goal. For example, if the goal is weight loss, suggest adjustments for that.",
+        #     "If the meal seems well-aligned, acknowledge that. If there are concerns, point them out and suggest improvements.",
+        #     "Keep the recommendation to 2-4 clear and helpful sentences."
+        # ]
         prompt_parts = [
-            "As a nutritional assistant, analyze the following meal and provide personalized advice.",
-            "User Profile:",
-            f"- Age: {user_profile.age or 'Not specified'}",
-            f"- Sex: {user_profile.sex or 'Not specified'}",
-            f"- Height: {user_profile.height_cm or 'Not specified'} cm",
-            f"- Current Weight: {user_profile.current_weight_kg or 'Not specified'} kg",
-            f"- Activity Level: {user_profile.activity_level or 'Not specified'}",
-            f"- Primary Goal: {user_profile.primary_goal or 'Not specified'}",
-            f"- Dietary Restrictions: {', '.join(user_profile.dietary_restrictions) if user_profile.dietary_restrictions else 'None'}",
-            f"- Allergies: {', '.join(user_profile.allergies) if user_profile.allergies else 'None'}",
-            f"- Intolerances: {', '.join(user_profile.intolerances) if user_profile.intolerances else 'None'}",
-            f"- Disliked Foods: {', '.join(user_profile.disliked_foods) if user_profile.disliked_foods else 'None'}",
-            f"- Medical Conditions: {', '.join(user_profile.medical_conditions) if user_profile.medical_conditions else 'None'}",
-            f"- Target Calories (kcal): {user_profile.target_calories_kcal or 'Not specified'}",
-            f"- Target Protein (g): {user_profile.target_protein_g or 'Not specified'}",
-            f"- Target Carbs (g): {user_profile.target_carbs_g or 'Not specified'}",
-            f"- Target Fat (g): {user_profile.target_fat_g or 'Not specified'}",
-            f"- Target Fiber (g): {user_profile.target_fiber_g or 'Not specified'}",
-            f"\nDetected Foods in the Meal: {food_list_str}",
-            "\n(Note: Assume typical portion sizes. Detailed portion size/weight is not available from the image analysis.)",
-            "\nBased on the user's profile and the detected foods, provide a concise and actionable nutritional recommendation.",
-            "Consider the user's primary goal. For example, if the goal is weight loss, suggest adjustments for that.",
-            "If the meal seems well-aligned, acknowledge that. If there are concerns, point them out and suggest improvements.",
-            "Keep the recommendation to 2-4 clear and helpful sentences."
+            "You are an advanced AI Nutritional Assistant, acting with the knowledge and reasoning capabilities of an expert human nutritionist. Your goal is to provide highly personalized, insightful, and actionable advice.",
+    "A user has submitted an image of their meal, and an initial visual analysis has identified the following food items and their relative detected sizes (proxied by bounding box area; a larger number suggests a larger portion relative to other items in the same image):",
+    f"{food_list_str}",
+    "\nHere is the user's detailed nutritional profile:",
+    f"  - Age: {user_profile.age or 'Not specified'}",
+    f"  - Sex: {user_profile.sex or 'Not specified'}",
+    f"  - Height: {user_profile.height_cm or 'Not specified'} cm",
+    f"  - Current Weight: {user_profile.current_weight_kg or 'Not specified'} kg",
+    f"  - Activity Level: {user_profile.activity_level or 'Not specified'}",
+    f"  - Primary Goal: {user_profile.primary_goal or 'Not specified'}",
+    f"  - Target Weight: {user_profile.target_weight_kg or 'Not specified'} kg",
+    f"  - Secondary Goals: {', '.join(user_profile.secondary_goals) if user_profile.secondary_goals else 'None'}",
+    f"  - Dietary Restrictions: {', '.join(user_profile.dietary_restrictions) if user_profile.dietary_restrictions else 'None'}",
+    f"  - Allergies: {', '.join(user_profile.allergies) if user_profile.allergies else 'None'}",
+    f"  - Intolerances: {', '.join(user_profile.intolerances) if user_profile.intolerances else 'None'}",
+    f"  - Disliked Foods: {', '.join(user_profile.disliked_foods) if user_profile.disliked_foods else 'None'}",
+    f"  - Medical Conditions: {', '.join(user_profile.medical_conditions) if user_profile.medical_conditions else 'None'}",
+    f"  - Target Daily Calories (kcal): {user_profile.target_calories_kcal or 'To be determined'}",
+    f"  - Target Daily Protein (g): {user_profile.target_protein_g or 'To be determined'}",
+    f"  - Target Daily Carbs (g): {user_profile.target_carbs_g or 'To be determined'}",
+    f"  - Target Daily Fat (g): {user_profile.target_fat_g or 'To be determined'}",
+    f"  - Target Daily Fiber (g): {user_profile.target_fiber_g or 'To be determined'}",
+
+    "\nINSTRUCTIONS FOR ANALYSIS AND RECOMMENDATION:",
+    "1.  *Infer Relative Portion Sizes:* Critically consider the 'Detected Size Proxy' for each food item. While not an exact grammage, use it to infer the relative abundance of each component in the meal. For example, a 'pasta' item with a large size proxy likely constitutes a significant portion of the meal's carbohydrates.",
+    "2.  *Deep Nutritional Evaluation of Each Food:* For each identified food, access your extensive nutritional knowledge. Consider its typical macronutrient (protein, carbs, fat) and micronutrient (vitamins, minerals) profile, fiber content, glycemic index, and potential benefits or drawbacks (e.g., 'salmon' is high in omega-3s; 'white bread' is a refined carb).",
+    "3.  *Holistic Meal Assessment:* Evaluate the meal as a whole. Does it appear balanced? Does it contain a good source of protein, complex carbohydrates, healthy fats, and sufficient fiber? Are there any glaring omissions or excesses?",
+    "4.  *Contextualize with User Profile:* This is CRUCIAL. Analyze the meal IN THE CONTEXT of the user's specific profile: their goals (e.g., weight loss, muscle gain, diabetes management), restrictions, allergies, and overall nutritional targets. For example, a meal مناسب for muscle gain might be too calorie-dense for someone aiming for weight loss.",
+    "5.  *Identify Alignments and Misalignments:* Clearly state how the meal aligns or misalign with the user's goals and nutritional needs. Be specific. For example: 'The grilled chicken is a good source of lean protein, aligning with your muscle gain goal. However, the large portion of fries may add excessive unhealthy fats and calories, potentially hindering your progress if not accounted for.'",
+    "6.  *Provide Actionable, Prioritized Recommendations:* Offer 2-4 concrete, actionable suggestions for improvement if needed. These should be realistic and easy for the user to implement. Examples:",
+    "    *   'Consider reducing the portion of pasta by about a third and adding more non-starchy vegetables like spinach or zucchini to increase fiber and nutrients while managing carbohydrate intake for your weight loss goal.'",
+    "    *   'To boost protein for your muscle gain objective, you could add another egg or a side of Greek yogurt to this breakfast.'",
+    "    *   'This meal looks quite balanced for your current maintenance goal! Ensure you're incorporating a variety of colorful vegetables throughout the day.'",
+    "7.  *Tone and Language:* Maintain a supportive, empathetic, and encouraging tone. Avoid judgmental language. Explain your reasoning clearly but concisely.",
+    "8.  *Output Format:* Present the analysis and recommendations in a clear, easy-to-read format. Use bullet points or short paragraphs for readability.",
+    "\nBegin your response with a brief overall impression of the meal, followed by your detailed analysis and recommendations."
+
         ]
+
+
+
         prompt = "\\n".join(prompt_parts)
 
         print(
@@ -257,6 +306,19 @@ def get_chat_response(chat_history: List[Dict[str, str]], current_recommendation
         print(f"Error during Q&A with Gemini: {e}")
         import traceback
         traceback.print_exc()
+        return None
+
+
+def safe_json_loads(response_text):
+    try:
+        # Limpia el texto si viene con ```json ... ```
+        cleaned = response_text.strip()
+        if cleaned.startswith("```json"):
+            cleaned = cleaned.removeprefix("```json").removesuffix("```").strip()
+        return json.loads(cleaned)
+    except Exception as e:
+        print(f"Error al parsear JSON: {e}")
+        print(f"Texto problemático: {response_text}")
         return None
 
 

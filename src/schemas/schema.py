@@ -63,15 +63,6 @@ class AgentState(BaseModel):
     profile_retrieved: bool = False
 
 
-class DetectedFoodItem(BaseModel):
-    label: str = Field(description="Name of the detected food item.")
-    bounding_box: List[float] = Field(
-        description="Coordinates of the bounding box [x_min, y_min, x_max, y_max] relative to image size (0.0-1.0) or pixels.")
-    mask_data: Optional[Any] = Field(
-        None, description="Segmentation mask data, e.g., RLE, polygon, or raw mask.")
-    # confidence: Optional[float] = Field(
-    #     None, description="Detection confidence score.")
-
 
 # class UserProfile(BaseModel):
 #     user_id: str
